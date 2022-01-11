@@ -155,7 +155,7 @@ function drawApp() {
 }
 
 var buzzCount = 19;
-function buzz() {
+function buzz() { //TODO: buzz end Prompt
   if ((require('Storage').readJSON('setting.json',1)||{}).quiet>1) return; // total silence
   Bangle.setLCDPower(1);
   Bangle.buzz().then(()=>{
@@ -163,7 +163,7 @@ function buzz() {
       setTimeout(buzz, 500);
     } else {
       // back to main after finish
-      setTimeout(load, 1000);
+      setTimeout(load, 1000); //TODO: sleep summuary
     }
   });
 }
@@ -171,7 +171,7 @@ function buzz() {
 // run
 var minAlarm = new Date();
 var measure = true;
-var totalSleepSec;
+var totalSleepSec = 0;
 if (nextAlarm !== undefined) {
   Bangle.loadWidgets();
   Bangle.drawWidgets();
@@ -192,18 +192,17 @@ if (nextAlarm !== undefined) {
       drawStringLine(stateTxt, 2);
     }
 
-    if (now >= nextAlarm || (measure && now >= minAlarm && swest <= 0)) {
+    if (measure && (now >= nextAlarm || (swest !== undefined && now >= minAlarm))) { //(measure && now >= minAlarm && swest !== undefined) {
       measure = false;
-      if (totalSleepSec === undefined) {
+      if (totalSleepSec === undefined) { //collect once
         if (slpStart !== undefined) slpPairs.push({"start":slpStart, "end":new Date()}); //collect last open interval
         totalSleepSec = slpPairs.reduce((sum, period) => sum += period.end - period.start)
-        // The alarm widget should handle this one
-        E.showMessage(deepslpsecs);
+        E.showMessage(deepslpsecs); //TODO: title, locale, nice, message
       }
       //setTimeout(load, 1000);
-      if (measure && now >= minAlarm && swest === false) {
+      if (now < nextAlarm) {
         buzz();
-      }
+      } //else: The alarm widget should handle alarm
     }
   }, 80); // 12.5Hz
   drawApp();
