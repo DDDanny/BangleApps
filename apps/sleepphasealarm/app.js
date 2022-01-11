@@ -14,7 +14,7 @@
 const DEFAULT_SETTINGS = {
   showTimeSec:false, //true,'unlocked'
   preAlertMinutes:30, 
-  sleepThreshSec=10, 
+  sleepThreshMinutes=10, 
   moveThres=(process.env.HWVERSION==2) ? 0.008 : 0.006, //Bangle 2 sensor seems more sensitive
   disableBangleWakeOn=true //deactivate twist etc.
 };
@@ -38,7 +38,7 @@ var slpPairs = []; //collects sleep periods = start/end
 
 function calcESS(val) {
   const moveThres = SETTINGS.accelThres;
-  const sleepThreshSec = SETTINGS.sleepThreshSec * 60;
+  const sleepThreshSec = SETTINGS.sleepThreshMinutes * 60000;
   essValues.push(val);
 
   if (essValues.length >= winWidth) {
@@ -145,7 +145,7 @@ function drawApp() {
       var tSec = NOW.getSeconds();
       drawStringLine((tHr < 10 ? "0" : "") + tHr + ":" + (tMin < 10 ? "0" : "") + tMin + (SETTINGS.showTimeSec ? ":" + (tSec < 10 ? "0" : "") + tSec : ""), 3);
     }
-    if (SETTINGS.showTimeSec === true || SETTINGS.showTimeSec === 'unlocked' && Bangle.isLocked() === false)
+    if (SETTINGS.showTimeSec === true || (SETTINGS.showTimeSec === 'unlocked' && Bangle.isLocked() === false))
       setTimeout(drawTime, 1000 - NOW.getMilliseconds()); // schedule to next second
     else
       setTimeout(drawTime, 60000 - (NOW.getSeconds() * 1000) - NOW.getMilliseconds()); // schedule to next minute
