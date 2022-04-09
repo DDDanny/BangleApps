@@ -11,16 +11,19 @@
     #5        or #2
     #6    (on move) -> 0:awake
 */
+const ACTIVE_ALARMS = ((require("Storage").readJSON("alarm.json",1)||[]).concat(require("Storage").readJSON("qalarm.json",1))||[]).filter(a=>a.on);
+const BANGLEJS2 = process.env.HWVERSION == 2; //# check for bangle 2
+
 const DEFAULT_SETTINGS = {
   showTimeSec:false, //true,'unlocked'
   preAlertMinutes:30, 
-  sleepThreshMinutes=10, 
-  moveThres=(process.env.HWVERSION==2) ? 0.008 : 0.006, //Bangle 2 sensor seems more sensitive
-  disableBangleWakeOn=true //deactivate twist etc.
+  sleepThreshMinutes:10, 
+  moveThres:BANGLEJS2 ? 0.008 : 0.006, //Bangle 2 sensor seems more sensitive
+  disableBangleWakeOn:true //deactivate twist etc.
 };
 const SETTINGS         = require("Storage").readJSON("sleepphasealarm.json",1)||DEFAULT_SETTINGS;
 //const SETTINGS = DEFAULT_SETTINGS; //DEV-Option
-const ACTIVE_TIMERS    = ((require("Storage").readJSON("alarm.json",1)||[]).concat(require("Storage").readJSON("qalarm.json",1))||[]).filter(a=>a.on);
+
 const ALERT_BEFORE_MS  = SETTINGS.preAlertMinutes * 60000; //30 minutes
 
 // Sleep/Wake detection with Estimation of Stationary Sleep-segments (ESS):
@@ -97,7 +100,7 @@ ACTIVE_TIMERS.forEach(a => {
 const LINES = 4; //0 - 3
 var L_HEIGTH; //calculated after load/draw widgets!
 var CENTER_X;
-function init() {
+function initScreen() {
   L_HEIGTH = Bangle.appRect.h/LINES;
   CENTER_X = Bangle.appRect.w/2+Bangle.appRect.x;
 
@@ -210,6 +213,6 @@ if (nextAlarm !== undefined) {
   E.showMessage('No active (q)alarm!'); //TODO: locale
   setTimeout(load, 1000);
 }
-// BTN2 to menu, BTN3 to main
-setWatch(Bangle.showLauncher, (process.env.HWVERSION==2) ? BTN1 : BTN2, { repeat: false, edge: "falling" });
-if (process.env.HWVERSION==1) setWatch(() => load(), BTN3, { repeat: false, edge: "falling" });
+// BTN2 to menu, BTN3 to main # on bangle 2 only BTN to main
+if (!BANGLEJS2) setWatch(Bangle.showLauncher, BTN2, { repeat: false, edge: "falling" });
+setWatch(() => load(), BANGLEJS2 ? BTN : BTN3, { repeat: false, edge: "falling" });

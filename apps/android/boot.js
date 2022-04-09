@@ -4,6 +4,7 @@
     Bluetooth.println(JSON.stringify(message));
   }
 
+  var settings = require("Storage").readJSON("android.settings.json",1)||{};
   var _GB = global.GB;
   global.GB = (event) => {
     // feed a copy to other handlers if there were any
@@ -49,9 +50,11 @@
   };
 
   // Battery monitor
-  function sendBattery() { gbSend({ t: "status", bat: E.getBattery() }); }
+  function sendBattery() { gbSend({ t: "status", bat: E.getBattery(), chg: Bangle.isCharging()?1:0 }); }
   NRF.on("connect", () => setTimeout(sendBattery, 2000));
-  NRF.on("disconnect", () => require("messages").clearAll()); // remove all messages on disconnect
+  Bangle.on("charging", sendBattery);
+  if (!settings.keep)
+    NRF.on("disconnect", () => require("messages").clearAll()); // remove all messages on disconnect
   setInterval(sendBattery, 10*60*1000);
   // Health tracking
   Bangle.on('health', health=>{
@@ -68,4 +71,6 @@
     if (isFinite(msg.id)) return gbSend({ t: "notify", n:response?"OPEN":"DISMISS", id: msg.id });
     // error/warn here?
   };
+  // remove settings object so it's not taking up RAM
+  delete settings;
 })();

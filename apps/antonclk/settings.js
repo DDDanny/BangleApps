@@ -38,7 +38,7 @@
     },
     "< Back": () => back(),
     "Seconds...": () => E.showMenu(secmenu),
-    "Date": stringInSettings("dateOnMain", ["Short", "Long", "ISO8601"]),
+    "Date": stringInSettings("dateOnMain", ["Long", "Short", "ISO8601"]),
     "Show Weekday": {
       value: (settings.weekDay !== undefined ? settings.weekDay : true),
       format: v => v ? "On" : "Off",
@@ -47,8 +47,16 @@
         writeSettings();
       }
     },
+    "Show CalWeek": {
+      value: (settings.calWeek !== undefined ? settings.calWeek : false),
+      format: v => v ? "On" : "Off",
+      onchange: v => {
+        settings.calWeek = v;
+        writeSettings();
+      }
+    },
     "Uppercase": {
-      value: (settings.upperCase !== undefined ? settings.upperCase : false),
+      value: (settings.upperCase !== undefined ? settings.upperCase : true),
       format: v => v ? "On" : "Off",
       onchange: v => {
         settings.upperCase = v;
@@ -73,7 +81,7 @@
     "< Back": () => E.showMenu(mainmenu),
     "Show": stringInSettings("secondsMode", ["Never", "Unlocked", "Always"]),
     "With \":\"": {
-      value: (settings.secondsWithColon !== undefined ? settings.secondsWithColon : false),
+      value: (settings.secondsWithColon !== undefined ? settings.secondsWithColon : true),
       format: v => v ? "On" : "Off",
       onchange: v => {
         settings.secondsWithColon = v;
@@ -81,14 +89,14 @@
       }
     },
     "Color": {
-      value: (settings.secondsColoured !== undefined ? settings.secondsColoured : false),
+      value: (settings.secondsColoured !== undefined ? settings.secondsColoured : true),
       format: v => v ? "On" : "Off",
       onchange: v => {
         settings.secondsColoured = v;
         writeSettings();
       }
     },
-    "Date": stringInSettings("dateOnSecs", ["No", "Year", "Weekday"])
+    "Date": stringInSettings("dateOnSecs", ["Year", "Weekday", "No"])
   };
 
   // Actually display the menu

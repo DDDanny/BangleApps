@@ -12,6 +12,11 @@
     return settings;
   }
 
+  function updateSettings(settings) {
+    require("Storage").writeJSON("recorder.json", settings);
+    if (WIDGETS["recorder"]) WIDGETS["recorder"].reload();
+  }
+
   function getRecorders() {
     var recorders = {
       gps:function() {
@@ -52,19 +57,18 @@
         };
       },
       hrm:function() {
-        var bpm = 0, bpmConfidence = 0;
+        var bpm = "", bpmConfidence = "", src="";
         function onHRM(h) {
-          if (h.confidence >= bpmConfidence) {
-            bpmConfidence = h.confidence;
-            bpm = h.bpm;
-          }
+          bpmConfidence = h.confidence;
+          bpm = h.bpm;
+          srv = h.src;
         }
         return {
           name : "HR",
-          fields : ["Heartrate", "Confidence"],
+          fields : ["Heartrate", "Confidence", "Source"],
           getValues : () => {
-            var r = [bpm,bpmConfidence];
-            bpm = 0; bpmConfidence = 0;
+            var r = [bpm,bpmConfidence,src];
+            bpm = ""; bpmConfidence = ""; src="";
             return r;
           },
           start : () => {
@@ -92,32 +96,6 @@
           draw : (x,y) => g.setColor(Bangle.isCharging() ? "#0f0" : "#ff0").drawImage(atob("DAwBAABgH4G4EYG4H4H4H4GIH4AA"),x,y)
         };
       },
-      temp:function() {
-        var core = 0, skin = 0;
-        var hasCore = false;
-        function onCore(c) {
-            core=c.core;
-            skin=c.skin;
-            hasCore = true;
-        }
-        return {
-          name : "Core",
-          fields : ["Core","Skin"],
-          getValues : () => {
-            var r = [core,skin];
-            return r;
-          },
-          start : () => {
-            hasCore = false;
-            Bangle.on('CoreTemp', onCore);
-          },
-          stop : () => {
-            hasCore = false;
-            Bangle.removeListener('CoreTemp', onCore);
-          },
-          draw : (x,y) => g.setColor(hasCore?"#0f0":"#8f8").drawImage(atob("DAwBAAAOAKPOfgZgZgZgZgfgPAAA"),x,y)
-        };
-      }, 
       steps:function() {
         var lastSteps = 0;
         return {
@@ -133,8 +111,38 @@
           draw : (x,y) => g.reset().drawImage(atob("DAwBAAMMeeeeeeeecOMMAAMMMMAA"),x,y)
         };
       }
-      // TODO: recAltitude from pressure sensor
     };
+    if (Bangle.getPressure){
+      recorders['baro'] = function() {
+        var temp="",press="",alt="";
+        function onPress(c) {
+            temp=c.temperature;
+            press=c.pressure;
+            alt=c.altitude;
+        }
+        return {
+          name : "Baro",
+          fields : ["Barometer Temperature", "Barometer Pressure", "Barometer Altitude"],
+          getValues : () => {
+              var r = [temp,press,alt];
+              temp="";
+              press="";
+              alt="";
+              return r;
+          },
+          start : () => {
+            Bangle.setBarometerPower(1,"recorder");
+            Bangle.on('pressure', onPress);
+          },
+          stop : () => {
+            Bangle.setBarometerPower(0,"recorder");
+            Bangle.removeListener('pressure', onPress);
+          },
+          draw : (x,y) => g.setColor("#0f0").drawImage(atob("DAwBAAH4EIHIEIHIEIHIEIEIH4AA"),x,y)
+        };
+      }
+    }
+    
     /* eg. foobar.recorder.js
     (function(recorders) {
       recorders.foobar = {
@@ -225,15 +233,35 @@
     Bangle.drawWidgets(); // relayout all widgets
   },setRecording:function(isOn) {
     var settings = loadSettings();
-    if (isOn && !settings.recording && require("Storage").list(settings.file).length)
-      return E.showPrompt("Overwrite\nLog 0?",{title:"Recorder",buttons:{Yes:"yes",No:"no"}}).then(selection=>{
-        if (selection=="no") return false; // just cancel
-        if (selection=="yes") require("Storage").open(settings.file,"r").erase();
-        // TODO: Add 'new file' option
+    if (isOn && !settings.recording && !settings.file) {
+      settings.file = "recorder.log0.csv";
+    } else if (isOn && !settings.recording && require("Storage").list(settings.file).length){
+      var logfiles=require("Storage").list(/recorder.log.*/);
+      var maxNumber=0;
+      for (var c of logfiles){
+          maxNumber = Math.max(maxNumber, c.match(/\d+/)[0]);
+      }
+      var newFileName;
+      if (maxNumber < 99){
+        newFileName="recorder.log" + (maxNumber + 1) + ".csv";
+        updateSettings(settings);
+      }
+      var buttons={Yes:"yes",No:"no"};
+      if (newFileName) buttons["New"] = "new";
+      return E.showPrompt("Overwrite\nLog " + settings.file.match(/\d+/)[0] + "?",{title:"Recorder",buttons:buttons}).then(selection=>{
+        if (selection==="no") return false; // just cancel
+        if (selection==="yes") {
+          require("Storage").open(settings.file,"r").erase();
+        }
+        if (selection==="new"){
+          settings.file = newFileName;
+          updateSettings(settings);
+        }
         return WIDGETS["recorder"].setRecording(1);
       });
+    }
     settings.recording = isOn;
-    require("Storage").write("recorder.json", settings);
+    updateSettings(settings);
     WIDGETS["recorder"].reload();
     return Promise.resolve(settings.recording);
   }/*,plotTrack:function(m) { // m=instance of openstmap module
